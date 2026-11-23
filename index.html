@@ -4702,6 +4702,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 function cbtMasuk(d) {
   cb.d = d; cb.portal = d.ujian.portal || 'CBT'; bahasaRuangUjian(); cb.maks = typeof d.ujian.maksPelanggaran === 'number' ? d.ujian.maksPelanggaran : 6;
   cb.sens = SENS[d.ujian.sensitivitas] ? d.ujian.sensitivitas : 'Sedang';
+  cb.deteksiLayar = d.ujian.deteksiLayar !== false;                                                   // saklar admin: deteksi layar kedua/mirror (default Ya)
   WM_OPACITY = WM_PETA[d.ujian.tandaAir] !== undefined ? WM_PETA[d.ujian.tandaAir] : WM_PETA.Samar;   // transparansi watermark per ujian
   layar('layarCbtInfo');
   $('ciKategori').textContent = d.ujian.kategori_test + (d.ujian.mapel ? ' · ' + d.ujian.mapel : '');
@@ -5514,10 +5515,26 @@ function pasangPengawasCbt() {
       clearTimeout(pgCbt.hUkuran);
       pgCbt.hUkuran = setTimeout(() => { if (pgCbt && sempit() && !bebasLuar() && Date.now() - tLebar >= 5000) { tLebar = Date.now(); laporViol('MULTITASK', 'Layar terbagi / jendela diperkecil'); } }, sens().terbagi);
     },
-    layarDua: () => {                                       // layar kedua dihitung sekali per sesi (tidak berulang setiap muat ulang)
-      if (!(window.screen && window.screen.isExtended) || !cb.sesi) return;
-      try { if (localStorage.getItem('cbt_dua_' + cb.sesi)) return; localStorage.setItem('cbt_dua_' + cb.sesi, '1'); } catch (e) { }
-      laporViol('MULTITASK', 'Dua layar terdeteksi');
+    layarDua: () => {                                       // layar kedua/mirror/proyektor dihitung sekali per sesi (tidak berulang saat muat ulang)
+      if (!cb.deteksiLayar || !cb.sesi) return;              // saklar admin: mis. lab memang memakai proyektor → deteksi dimatikan
+      try { if (localStorage.getItem('cbt_dua_' + cb.sesi)) return; } catch (e) { }
+      // isExtended = layar diperluas/mirror (Windows/Chromium). Safari/iPad: undefined → tidak ada deteksi sama sekali (nol salah-tuduh).
+      if (!(window.screen && window.screen.isExtended)) return;
+      const lapor = n => {
+        if (!pgCbt || !cb.sesi) return;
+        try { if (localStorage.getItem('cbt_dua_' + cb.sesi)) return; localStorage.setItem('cbt_dua_' + cb.sesi, '1'); } catch (e) { }
+        laporViol('MULTITASK', n > 1 ? 'Layar kedua/mirror terdeteksi (' + n + ' layar)' : 'Layar kedua/mirror terdeteksi');
+      };
+      // perhalus jumlah layar HANYA bila izin window-management sudah diberikan — tidak memunculkan prompt saat ujian
+      try {
+        if (navigator.permissions && navigator.permissions.query && window.getScreenDetails) {
+          navigator.permissions.query({ name: 'window-management' })
+            .then(p => (p.state === 'granted') ? window.getScreenDetails().then(s => lapor((s.screens || []).length || 2)) : lapor(2))
+            .catch(() => lapor(2));
+          return;
+        }
+      } catch (e) { }
+      lapor(2);
     }
   };
   document.addEventListener('copy', pgCbt.salin); document.addEventListener('paste', pgCbt.tempel); document.addEventListener('cut', pgCbt.potong);
@@ -5592,4 +5609,4 @@ function lepasPengawasCbt() {
 <script>window.__berkasUtuh = true;</script>
 </body>
 </html>
-<!-- AKHIR BERKAS Index · 526400 -->
+<!-- AKHIR BERKAS Index · 527598 -->
