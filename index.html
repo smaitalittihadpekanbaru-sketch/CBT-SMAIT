@@ -1054,8 +1054,9 @@ async function api(action, payload, opsi) {
 }
 async function apiInti(action, payload, opsi) {
   const berat = ['submit', 'start', 'akhiriTO', 'exportReport', 'exportReportTO', 'rekapTO', 'login'].indexOf(action) >= 0;
-  const maks = opsi.coba !== undefined ? opsi.coba : ({ submit: 10, akhiriTO: 10, start: 8, login: 6 }[action] || 5);
-  const batas = opsi.batasMs || (berat ? 60000 : 30000);
+  const diSeb = typeof PERANGKAT !== 'undefined' && PERANGKAT && PERANGKAT.seb;   // webview SEB (Windows) lebih lambat → beri waktu & percobaan lebih
+  const maks = opsi.coba !== undefined ? opsi.coba : (({ submit: 10, akhiriTO: 10, start: 8, login: 6 }[action] || 5) + (diSeb ? 3 : 0));
+  const batas = opsi.batasMs || Math.round((berat ? 60000 : 30000) * (diSeb ? 1.5 : 1));
   let galat = null;
   for (let i = 0; i < maks; i++) {
     if (i > 0) {
@@ -5162,7 +5163,7 @@ async function kirimCbt(otomatis) {
   const sesiIni = cb.sesi;
   tandaKirim('cbt', sesiIni);
   try {
-    const d = await kirimSampaiBerhasil('cbtKirim', () => ({ sesiId: sesiIni, jawaban: cb.jawaban, viol: cb.violTunda }),
+    const d = await kirimSampaiBerhasil('cbtKirim', () => ({ sesiId: sesiIni, jawaban: cb.jawaban, viol: cb.violTunda, otomatis: !!otomatis }),
       otomatis ? (EN() ? 'Time is up — submitting…' : 'Waktu habis — mengirim jawaban…') : (EN() ? 'Submitting…' : 'Mengirim jawaban…'));
     hapusTandaKirim();
     bersihkanLokalCbt(sesiIni);
@@ -5591,4 +5592,4 @@ function lepasPengawasCbt() {
 <script>window.__berkasUtuh = true;</script>
 </body>
 </html>
-<!-- AKHIR BERKAS Index · 526175 -->
+<!-- AKHIR BERKAS Index · 526400 -->
